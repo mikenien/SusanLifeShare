@@ -1,10 +1,7 @@
-site_url: https://<你的Cloudflare網址>   # 之後換成你 Cloudflare Pages 的正式網址
 backend:
   name: github
   repo: mikenien/my-links
   branch: main
-  base_url: https://<你的Cloudflare網址>  # 重要：Cloudflare Pages 用 functions 來做 OAuth，所以要設 base_url
-  # auth_endpoint 可不寫，這套 functions 預設路徑可用（官方範例也說可選）:contentReference[oaicite:1]{index=1}
 
 media_folder: "uploads"
 public_folder: "/uploads"
