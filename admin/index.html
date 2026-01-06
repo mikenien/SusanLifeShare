@@ -1,12 +1,392 @@
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="robots" content="noindex" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Admin</title>
-  </head>
-  <body>
-    <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
-  </body>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin • SusanLifeShare</title>
+  <style>
+    :root{ color-scheme: dark; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:#0b0c10; color:#f2f4f8; }
+    .wrap{ max-width:1100px; margin:0 auto; padding:18px; }
+    .top{ display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center; }
+    h1{ font-size:16px; margin:0; font-weight:950; }
+    p{ margin:0; font-size:12px; opacity:.75; }
+    .btn{ display:inline-flex; align-items:center; justify-content:center; padding:9px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:#f2f4f8; font-weight:900; font-size:12px; cursor:pointer; text-decoration:none; }
+    .btn.primary{ background:rgba(125,92,255,.24); border-color:rgba(125,92,255,.45); }
+    .btn.danger{ background:rgba(255,92,92,.18); border-color:rgba(255,92,92,.35); }
+    input, select, textarea{
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      color:#f2f4f8;
+      border-radius:12px;
+      padding:10px 12px;
+      font-size:13px;
+      outline:none;
+    }
+    textarea{ width:100%; min-height:160px; resize:vertical; font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-size:12px; }
+    .grid{ display:grid; grid-template-columns:1fr; gap:14px; margin-top:14px; }
+    @media (min-width:900px){ .grid{ grid-template-columns:1.15fr .85fr; } }
+    .panel{ border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.03); border-radius:16px; overflow:hidden; }
+    .ph{ padding:12px; border-bottom:1px solid rgba(255,255,255,.08); display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center; }
+    .ph strong{ font-size:13px; font-weight:950; }
+    .pc{ padding:12px; }
+    table{ width:100%; border-collapse:collapse; font-size:12px; }
+    th, td{ border-bottom:1px solid rgba(255,255,255,.08); padding:8px 6px; vertical-align:top; }
+    th{ text-align:left; opacity:.9; }
+    .inline{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .hr{ height:1px; background:rgba(255,255,255,.08); margin:12px 0; }
+    .hint{ font-size:12px; opacity:.78; line-height:1.55; }
+    .muted{ opacity:.7; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>Admin • SusanLifeShare</h1>
+        <p class="muted">Basic Auth 保護中（只有你輸入帳密才能進）</p>
+      </div>
+      <div class="inline">
+        <a class="btn" href="/">Back to site</a>
+        <button class="btn primary" id="saveLocal">Save (Local)</button>
+        <button class="btn" id="resetLocal">Reset to JSON</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- Videos -->
+      <div class="panel">
+        <div class="ph">
+          <strong>影片（新增 / 編輯 / 刪除 / 批量移動分類 / 批量刪除）</strong>
+          <div class="inline">
+            <button class="btn" id="addVideo">+ Add</button>
+            <button class="btn" id="editVideo">Edit (single)</button>
+            <button class="btn danger" id="delVideo">Delete (single)</button>
+          </div>
+        </div>
+        <div class="pc">
+          <div class="inline" style="margin-bottom:10px;">
+            <select id="bulkCat"></select>
+            <button class="btn" id="bulkMove">Bulk Move Category</button>
+            <button class="btn danger" id="bulkDelete">Bulk Delete</button>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width:34px;"><input type="checkbox" id="chkAll"></th>
+                <th>Title / URL</th>
+                <th style="width:140px;">Category</th>
+                <th style="width:120px;">Tag</th>
+                <th style="width:70px;">Hot</th>
+                <th style="width:110px;">Date</th>
+              </tr>
+            </thead>
+            <tbody id="videoTbody"></tbody>
+          </table>
+
+          <div class="hr"></div>
+          <div class="hint">
+            ✅ 你改完後要讓所有人看到：按右邊 Export JSON → 複製 → 貼回 repo 的 <b>data/videos.json</b> 覆蓋後 Commit。
+          </div>
+        </div>
+      </div>
+
+      <!-- Categories + JSON -->
+      <div class="panel">
+        <div class="ph">
+          <strong>分類（新增 / 重新命名 / 刪除） + 匯入/匯出</strong>
+          <div class="inline">
+            <button class="btn" id="addCat">+ Category</button>
+            <button class="btn" id="renameCat">Rename</button>
+            <button class="btn danger" id="deleteCat">Delete</button>
+          </div>
+        </div>
+        <div class="pc">
+          <div class="inline">
+            <select id="catPick"></select>
+            <span class="hint">刪除分類會把該分類的影片改成「不分類」</span>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="inline">
+            <button class="btn" id="exportJson">Export JSON</button>
+            <button class="btn" id="importJson">Import JSON</button>
+          </div>
+
+          <div style="margin-top:10px;">
+            <textarea id="jsonBox" placeholder="Export 會出現在這裡；Import 時把 JSON 貼這裡再按 Import"></textarea>
+          </div>
+
+          <div class="hint" style="margin-top:10px;">
+            JSON 格式：{ "categories": ["Life","Travel"], "items": [...] }<br>
+            若你不想分類：把 categories 變空陣列，或影片的 cat 留空即可（前台會自動隱藏分類列）
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hint muted" style="margin-top:14px;">
+      ※ 這是靜態後台：目前「寫回 GitHub」要你手動把 Export 的 JSON 貼回 data/videos.json。要真正自動寫回 repo 才需要上 Decap CMS / OAuth。
+    </div>
+  </div>
+
+<script>
+const DATA_URL = "../data/videos.json";
+const LS_LOCAL = "SLS_ADMIN_ITEMS_V1";
+let DB = { categories: [], items: [] };
+
+const $ = (id) => document.getElementById(id);
+const videoTbody = $("videoTbody");
+const chkAll = $("chkAll");
+const bulkCat = $("bulkCat");
+const catPick = $("catPick");
+const jsonBox = $("jsonBox");
+
+function uid(){ return "id_" + Math.random().toString(36).slice(2) + Date.now().toString(36); }
+function escapeHtml(s){ return (s+"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+function normalizeItems(list){
+  return (list||[]).map(x => ({
+    id: x.id || uid(),
+    title:(x.title||"").trim(),
+    url:(x.url||"").trim(),
+    thumb:(x.thumb||"").trim(),
+    cat:(x.cat||"").trim(),
+    tag:(x.tag||"").trim(),
+    hot: Number.isFinite(+x.hot) ? +x.hot : 0,
+    date:(x.date||"").toString().trim()
+  })).filter(x => x.title && x.url);
+}
+
+async function loadFromJson(){
+  try{
+    const res = await fetch(DATA_URL, { cache:"no-store" });
+    const data = await res.json();
+    const items = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
+    const categories = Array.isArray(data.categories) ? data.categories : [];
+    return { categories: categories.map(x=>(x||"").trim()).filter(Boolean), items: normalizeItems(items) };
+  }catch(e){
+    return { categories: [], items: [] };
+  }
+}
+
+function loadFromLocal(){
+  try{
+    const raw = localStorage.getItem(LS_LOCAL);
+    if(!raw) return null;
+    const data = JSON.parse(raw);
+    const items = Array.isArray(data.items) ? data.items : data;
+    const categories = Array.isArray(data.categories) ? data.categories : [];
+    return { categories: categories.map(x=>(x||"").trim()).filter(Boolean), items: normalizeItems(items) };
+  }catch(e){ return null; }
+}
+
+function saveLocal(){
+  localStorage.setItem(LS_LOCAL, JSON.stringify(DB));
+}
+
+function getSelectedIds(){
+  return Array.from(document.querySelectorAll('input[data-vid="1"]:checked')).map(x=>x.value);
+}
+
+function rebuildSelects(){
+  // categories list: from DB.categories + any used in items
+  const used = Array.from(new Set(DB.items.map(x=>(x.cat||"").trim()).filter(Boolean)));
+  const cats = Array.from(new Set([...(DB.categories||[]), ...used])).sort((a,b)=>a.localeCompare(b));
+
+  bulkCat.innerHTML = `<option value="">(No category)</option>` + cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+  catPick.innerHTML = cats.length ? cats.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("") : `<option value="" disabled>(No categories)</option>`;
+}
+
+function render(){
+  rebuildSelects();
+
+  const rows = DB.items
+    .slice()
+    .sort((a,b)=> String(b.date||"").localeCompare(String(a.date||"")))
+    .map(v => `
+      <tr>
+        <td><input data-vid="1" type="checkbox" value="${escapeHtml(v.id)}"></td>
+        <td>
+          <div style="font-weight:950; margin-bottom:4px;">${escapeHtml(v.title)}</div>
+          <div style="opacity:.7; word-break:break-all;">${escapeHtml(v.url)}</div>
+        </td>
+        <td>${escapeHtml(v.cat || "(none)")}</td>
+        <td>${escapeHtml(v.tag || "")}</td>
+        <td>${escapeHtml(String(v.hot||0))}</td>
+        <td>${escapeHtml(v.date || "")}</td>
+      </tr>
+    `).join("");
+
+  videoTbody.innerHTML = rows;
+
+  chkAll.checked = false;
+  chkAll.onchange = () => {
+    const on = chkAll.checked;
+    document.querySelectorAll('input[data-vid="1"]').forEach(x => x.checked = on);
+  };
+
+  jsonBox.value = JSON.stringify(DB, null, 2);
+}
+
+/** Video CRUD **/
+function promptVideo(initial){
+  const v = initial || { id: uid(), title:"", url:"", thumb:"", cat:"", tag:"", hot:0, date:new Date().toISOString().slice(0,10) };
+
+  const title = prompt("Title", v.title); if(title===null) return null;
+  const url = prompt("URL", v.url); if(url===null) return null;
+  const thumb = prompt("Thumb URL (optional)", v.thumb); if(thumb===null) return null;
+  const cat = prompt("Category (optional, blank = no category)", v.cat); if(cat===null) return null;
+  const tag = prompt("Tag (optional)", v.tag); if(tag===null) return null;
+  const hot = prompt("Hot (0-100)", String(v.hot ?? 0)); if(hot===null) return null;
+  const date = prompt("Date (YYYY-MM-DD)", v.date || ""); if(date===null) return null;
+
+  return {
+    id: v.id,
+    title:(title||"").trim(),
+    url:(url||"").trim(),
+    thumb:(thumb||"").trim(),
+    cat:(cat||"").trim(),
+    tag:(tag||"").trim(),
+    hot: Number.isFinite(+hot) ? +hot : 0,
+    date:(date||"").trim()
+  };
+}
+
+$("addVideo").onclick = () => {
+  const nv = promptVideo(null);
+  if(!nv) return;
+  if(!nv.title || !nv.url){ alert("Title/URL required"); return; }
+  DB.items.unshift(nv);
+  saveLocal();
+  render();
+};
+
+$("editVideo").onclick = () => {
+  const ids = getSelectedIds();
+  if(ids.length !== 1){ alert("請勾選 1 支影片再 Edit"); return; }
+  const cur = DB.items.find(x=>x.id===ids[0]);
+  if(!cur) return;
+  const nv = promptVideo(cur);
+  if(!nv) return;
+  Object.assign(cur, nv);
+  saveLocal();
+  render();
+};
+
+$("delVideo").onclick = () => {
+  const ids = getSelectedIds();
+  if(ids.length !== 1){ alert("請勾選 1 支影片再 Delete"); return; }
+  if(!confirm("Delete this video?")) return;
+  DB.items = DB.items.filter(x=>x.id!==ids[0]);
+  saveLocal();
+  render();
+};
+
+/** Bulk **/
+$("bulkMove").onclick = () => {
+  const ids = getSelectedIds();
+  if(ids.length===0){ alert("請先勾選影片"); return; }
+  const to = bulkCat.value; // "" = no category
+  DB.items.forEach(x => { if(ids.includes(x.id)) x.cat = to; });
+  saveLocal();
+  render();
+};
+
+$("bulkDelete").onclick = () => {
+  const ids = getSelectedIds();
+  if(ids.length===0){ alert("請先勾選影片"); return; }
+  if(!confirm(`Bulk delete ${ids.length} videos?`)) return;
+  DB.items = DB.items.filter(x=>!ids.includes(x.id));
+  saveLocal();
+  render();
+};
+
+/** Categories CRUD **/
+$("addCat").onclick = () => {
+  const name = prompt("New category name:");
+  if(name===null) return;
+  const c = (name||"").trim();
+  if(!c){ alert("Empty"); return; }
+  DB.categories = Array.from(new Set([...(DB.categories||[]), c])).sort((a,b)=>a.localeCompare(b));
+  saveLocal();
+  render();
+};
+
+$("renameCat").onclick = () => {
+  const old = catPick.value;
+  if(!old){ alert("No categories"); return; }
+  const nn = prompt("Rename category to:", old);
+  if(nn===null) return;
+  const neu = (nn||"").trim();
+  if(!neu){ alert("Empty"); return; }
+
+  DB.categories = (DB.categories||[]).map(c => c===old ? neu : c);
+  DB.categories = Array.from(new Set(DB.categories)).filter(Boolean).sort((a,b)=>a.localeCompare(b));
+
+  DB.items.forEach(x => { if(x.cat === old) x.cat = neu; });
+
+  saveLocal();
+  render();
+};
+
+$("deleteCat").onclick = () => {
+  const c = catPick.value;
+  if(!c){ alert("No categories"); return; }
+  if(!confirm(`Delete category "${c}"?\n影片會變成不分類`)) return;
+
+  DB.categories = (DB.categories||[]).filter(x => x !== c);
+  DB.items.forEach(x => { if(x.cat === c) x.cat = ""; });
+
+  saveLocal();
+  render();
+};
+
+/** Import/Export **/
+$("exportJson").onclick = () => {
+  jsonBox.value = JSON.stringify(DB, null, 2);
+  jsonBox.focus(); jsonBox.select();
+};
+
+$("importJson").onclick = () => {
+  const txt = jsonBox.value.trim();
+  if(!txt){ alert("請貼上 JSON"); return; }
+  let obj;
+  try{ obj = JSON.parse(txt); }catch(e){ alert("JSON 格式錯誤"); return; }
+
+  const items = Array.isArray(obj) ? obj : (Array.isArray(obj.items) ? obj.items : null);
+  if(!items){ alert("需要 { items: [...] } 或直接 [...]"); return; }
+
+  const categories = Array.isArray(obj.categories) ? obj.categories : [];
+  DB = { categories: categories.map(x=>(x||"").trim()).filter(Boolean), items: normalizeItems(items) };
+
+  saveLocal();
+  render();
+};
+
+$("saveLocal").onclick = () => { saveLocal(); alert("Saved to this browser."); };
+
+$("resetLocal").onclick = async () => {
+  if(!confirm("Reset local back to data/videos.json?")) return;
+  localStorage.removeItem(LS_LOCAL);
+  DB = await loadFromJson();
+  saveLocal();
+  render();
+};
+
+/** init **/
+(async function init(){
+  const fromLocal = loadFromLocal();
+  if(fromLocal){ DB = fromLocal; }
+  else{
+    DB = await loadFromJson();
+    saveLocal();
+  }
+  render();
+})();
+</script>
+</body>
 </html>
